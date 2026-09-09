@@ -14,24 +14,94 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Update direct Investing.com feeds
+        with:
+          fetch-depth: 0
+
+      - name: Update Investing.com news ingestion
         run: |
+          git fetch origin main
+          git reset --hard origin/main
           python - <<'PY'
           from pathlib import Path
           p = Path("app.py")
           s = p.read_text()
-          old = '    "Investing.com": "https://www.investing.com/rss/news_14.rss",\n'
-          new = '''    # Investing.com direct RSS: fast commodity news + broad breaking news.\n    "Investing.com Commodities": "https://www.investing.com/rss/news_11.rss",\n    "Investing.com Latest": "https://www.investing.com/rss/news_1063.rss",\n    "Investing.com India Commodities": "https://in.investing.com/rss/news_11.rss",\n'''
-          if old in s:
-              s = s.replace(old, new, 1)
-          elif '"Investing.com Commodities": "https://www.investing.com/rss/news_11.rss"' not in s:
-              raise SystemExit("Expected Investing.com feed line not found")
-          s = s.replace('"Investing.com": 0.85,', '"Investing.com": 0.85, "Investing.com Commodities": 1.05, "Investing.com Latest": 0.90, "Investing.com India Commodities": 0.90,', 1)
+
+          # Show more relevant articles from the 24-hour window.
+          s = s.replace("TOP_NEWS = 15", "TOP_NEWS = 30", 1)
+
+          # Add dedicated Investing.com searches. The site itself currently shows a much larger
+          # stream of commodity/futures stories than the old single query was returning.
+          old_build = '''    for name, domain in TARGET_WEBSITES.items():
+        feeds[f"{name} (web)"] = google_news_url(query, domain)
+    feeds.update(DIRECT_FEEDS)
+    return feeds
+'''
+          new_build = '''    for name, domain in TARGET_WEBSITES.items():
+        feeds[f"{name} (web)"] = google_news_url(query, domain)
+    feeds.update(DIRECT_FEEDS)
+
+    # Extra fast Investing.com searches so commodity stories are not lost in a broad feed.
+    investing_queries = {
+        "Investing.com Crude Fast": '"crude oil" OR Brent OR WTI OR "oil prices" OR "oil supply" OR Hormuz',
+        "Investing.com Gas Fast": '"natural gas" OR LNG OR "gas prices" OR "gas supply" OR "gas storage" OR pipeline',
+        "Investing.com Energy Fast": 'Iran OR Gulf OR refinery OR tanker OR sanctions OR OPEC OR "energy infrastructure"',
+    }
+    for name, q in investing_queries.items():
+        feeds[name] = google_news_url(q, "investing.com")
+    return feeds
+'''
+          if old_build in s:
+              s = s.replace(old_build, new_build, 1)
+
+          # feedparser may expose dates as *_parsed rather than a parseable date string.
+          old_date = '''def parse_date(entry):
+    for key in ("published", "updated"):
+        value = getattr(entry, key, None)
+        if value:
+            try:
+                return parsedate_to_datetime(value).astimezone(timezone.utc)
+            except Exception:
+                pass
+    return None
+'''
+          new_date = '''def parse_date(entry):
+    for key in ("published", "updated"):
+        value = getattr(entry, key, None)
+        if value:
+            try:
+                return parsedate_to_datetime(value).astimezone(timezone.utc)
+            except Exception:
+                pass
+    for key in ("published_parsed", "updated_parsed"):
+        value = getattr(entry, key, None)
+        if value:
+            try:
+                return datetime(*value[:6], tzinfo=timezone.utc)
+            except Exception:
+                pass
+    return None
+'''
+          if old_date in s:
+              s = s.replace(old_date, new_date, 1)
+
+          # Fetch more entries per source; this matters for Investing.com because its commodity
+          # page has many stories inside the same 24-hour period.
+          s = s.replace("def fetch_one(source, url, max_entries=35):", "def fetch_one(source, url, max_entries=75):", 1)
+          s = s.replace("def fetch(feeds, max_entries=35):", "def fetch(feeds, max_entries=75):", 1)
+
+          # Keep the direct Investing.com RSS sources, but make them explicitly high priority.
+          if '"Investing.com Commodities": "https://www.investing.com/rss/news_11.rss"' not in s:
+              marker = '    "CNBC": "https://www.cnbc.com/id/100003114/device/rss/rss.html",\n'
+              insert = marker + '    "Investing.com Commodities": "https://www.investing.com/rss/news_11.rss",\n    "Investing.com Latest": "https://www.investing.com/rss/news_1063.rss",\n    "Investing.com India Commodities": "https://in.investing.com/rss/news_11.rss",\n'
+              s = s.replace(marker, insert, 1)
+
           p.write_text(s)
           PY
+
+          python -m py_compile app.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app.py
           git diff --cached --quiet && exit 0
-          git commit -m "Use direct Investing.com commodity RSS feeds"
-          git push
+          git commit -m "Improve Investing.com commodity news capture"
+          git push origin main
