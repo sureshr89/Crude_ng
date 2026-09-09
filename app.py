@@ -17,7 +17,6 @@ TOP_NEWS = 15
 MIN_TARGET_SOURCES = 10
 MAX_TARGET_SOURCES = 20
 
-# Official / specialist feeds.
 DIRECT_FEEDS = {
     "EIA": "https://www.eia.gov/rss/todayinenergy.xml",
     "OPEC": "https://www.opec.org/assets/assetdb/opec_rss.xml",
@@ -30,26 +29,14 @@ DIRECT_FEEDS = {
     "Investing.com": "https://www.investing.com/rss/news_14.rss",
 }
 
-# Google News RSS is used only as a transport layer for independent publisher/site queries.
-# The publisher is taken from each RSS item's source field when available.
 TARGET_WEBSITES = {
-    "Reuters": "reuters.com",
-    "AP News": "apnews.com",
-    "Bloomberg": "bloomberg.com",
-    "CNBC": "cnbc.com",
-    "MarketWatch": "marketwatch.com",
-    "OilPrice": "oilprice.com",
-    "Rigzone": "rigzone.com",
-    "S&P Global": "spglobal.com",
-    "Investing.com": "investing.com",
-    "Yahoo Finance": "finance.yahoo.com",
-    "Financial Times": "ft.com",
-    "Wall Street Journal": "wsj.com",
-    "Energy Intelligence": "energyintel.com",
-    "Natural Gas Intelligence": "naturalgasintel.com",
-    "EIA": "eia.gov",
-    "IEA": "iea.org",
-    "OPEC": "opec.org",
+    "Reuters": "reuters.com", "AP News": "apnews.com", "Bloomberg": "bloomberg.com",
+    "CNBC": "cnbc.com", "MarketWatch": "marketwatch.com", "OilPrice": "oilprice.com",
+    "Rigzone": "rigzone.com", "S&P Global": "spglobal.com", "Investing.com": "investing.com",
+    "Yahoo Finance": "finance.yahoo.com", "Financial Times": "ft.com",
+    "Wall Street Journal": "wsj.com", "Energy Intelligence": "energyintel.com",
+    "Natural Gas Intelligence": "naturalgasintel.com", "EIA": "eia.gov",
+    "IEA": "iea.org", "OPEC": "opec.org",
 }
 
 COUNTRY_TAGS = {
@@ -78,12 +65,11 @@ NG_TAGS = [
 ]
 
 SOURCE_WEIGHT = {
-    "EIA": 1.45, "OPEC": 1.50, "IEA": 1.50, "Reuters": 1.35,
-    "AP News": 1.20, "Bloomberg": 1.20, "S&P Global": 1.20,
-    "Rigzone": 1.00, "OilPrice": 0.90, "MarketWatch": 0.95,
-    "CNBC": 0.95, "Investing.com": 0.85, "Yahoo Finance": 0.85,
-    "Financial Times": 1.10, "Wall Street Journal": 1.15,
-    "Natural Gas Intelligence": 1.15, "Energy Intelligence": 1.15,
+    "EIA": 1.45, "OPEC": 1.50, "IEA": 1.50, "Reuters": 1.35, "AP News": 1.20,
+    "Bloomberg": 1.20, "S&P Global": 1.20, "Rigzone": 1.00, "OilPrice": 0.90,
+    "MarketWatch": 0.95, "CNBC": 0.95, "Investing.com": 0.85, "Yahoo Finance": 0.85,
+    "Financial Times": 1.10, "Wall Street Journal": 1.15, "Natural Gas Intelligence": 1.15,
+    "Energy Intelligence": 1.15,
 }
 
 CRUDE_RULES = [
@@ -128,10 +114,7 @@ def google_news_url(query, site=None):
 def build_news_feeds(product):
     tags = CRUDE_TAGS if product == "crude" else NG_TAGS
     query = " OR ".join(f'"{x}"' for x in tags[:14])
-    feeds = {}
-    for name, domain in TARGET_WEBSITES.items():
-        feeds[f"{name} (web)"] = google_news_url(query, domain)
-    # Add the official/specialist RSS feeds as independent inputs too.
+    feeds = {f"{name} (web)": google_news_url(query, domain) for name, domain in TARGET_WEBSITES.items()}
     feeds.update(DIRECT_FEEDS)
     return feeds
 
@@ -157,7 +140,6 @@ def get_item_source(entry, fallback):
     source_obj = getattr(entry, "source", None)
     source_title = clean_text(getattr(source_obj, "title", "")) if source_obj else ""
     if source_title:
-        # Keep our canonical names where possible.
         low = source_title.lower()
         for canonical in TARGET_WEBSITES:
             if canonical.lower() in low:
@@ -177,14 +159,8 @@ def fetch_one(source, url, max_entries=35):
             dt = parse_date(entry)
             if not title or dt is None:
                 continue
-            rows.append({
-                "Time": dt,
-                "Source": get_item_source(entry, source),
-                "Feed": source,
-                "Headline": title,
-                "Summary": summary,
-                "Link": link,
-            })
+            rows.append({"Time": dt, "Source": get_item_source(entry, source), "Feed": source,
+                         "Headline": title, "Summary": summary, "Link": link})
     except Exception:
         pass
     return rows
@@ -203,7 +179,6 @@ def fetch(feeds, max_entries=35):
     if not rows:
         return pd.DataFrame(columns=columns)
     df = pd.DataFrame(rows)
-    # Deduplicate identical headlines while keeping the newest copy.
     df["DedupKey"] = df["Headline"].str.lower().str.replace(r"\W+", " ", regex=True).str.strip()
     df = df.sort_values("Time", ascending=False).drop_duplicates("DedupKey", keep="first").drop(columns=["DedupKey"])
     return df.sort_values("Time", ascending=False).reset_index(drop=True)
@@ -239,45 +214,33 @@ def build_market_news(df, topic_terms, rules):
     df = df[(df["Time"] >= cutoff) & df.apply(lambda r: relevant(r, topic_terms), axis=1)].copy()
     if df.empty:
         return 0.0, 0, df, 0.0, []
-
     scores, weights, reasons, groups, tags = [], [], [], [], []
     for _, row in df.iterrows():
         text = f"{row['Headline']} {row['Summary']}"
         score, hits = classify(text, rules)
         weight = age_weight(row["Time"]) * SOURCE_WEIGHT.get(row["Source"], 0.75)
-        scores.append(score)
-        weights.append(weight)
+        scores.append(score); weights.append(weight)
         reasons.append("; ".join(h[1] for h in hits[:3]) if hits else "No material market-impact rule")
         groups.append(sorted(set(h[2] for h in hits)))
         tags.append([t for t in topic_terms if t.lower() in text.lower()][:6])
-
-    df["Impact"] = scores
-    df["Weight"] = weights
-    df["Weighted"] = df["Impact"] * df["Weight"]
-    df["Reason"] = reasons
-    df["Groups"] = groups
-    df["Tags"] = tags
-
+    df["Impact"] = scores; df["Weight"] = weights; df["Weighted"] = df["Impact"] * df["Weight"]
+    df["Reason"] = reasons; df["Groups"] = groups; df["Tags"] = tags
     material = df[df["Impact"] != 0].copy()
     raw_total = float(material["Weighted"].sum()) if not material.empty else 0.0
-
     event_sources = {}
     for _, row in material.iterrows():
         for group in row["Groups"]:
             event_sources.setdefault(group, set()).add(row["Source"])
     corroborated = sum(1 for sources in event_sources.values() if len(sources) >= 2)
-
     fresh = material[material["Time"] >= datetime.now(timezone.utc) - pd.Timedelta(hours=12)]
-    fresh_count = len(fresh)
-    source_count = len(set(material["Source"])) if not material.empty else 0
+    fresh_count = len(fresh); source_count = len(set(material["Source"])) if not material.empty else 0
     confidence = 25 + min(25, fresh_count * 5) + min(20, source_count * 4) + min(20, corroborated * 8)
     if not material.empty and (material["Impact"] > 0).any() and (material["Impact"] < 0).any():
         confidence -= 20
     confidence = max(0.0, min(85.0, confidence))
-
     score = max(-10.0, min(10.0, raw_total))
     df["Importance"] = (df["Impact"].abs() * df["Weight"] * 10).round(1)
-    # IMPORTANT: news display order is strictly newest -> oldest, not importance order.
+    # Display order is ALWAYS newest -> oldest. Importance never reorders the news feed.
     df = df.sort_values("Time", ascending=False).reset_index(drop=True)
     return score, int(round(score)), df, confidence, sorted(event_sources.items())
 
@@ -294,7 +257,7 @@ def render_news(df):
     if df.empty:
         st.info("No relevant news in the last 24 hours. The app will retry in 60 seconds.")
         return
-    for _, row in df.head(TOP_NEWS).iterrows():
+    for _, row in df.sort_values("Time", ascending=False).head(TOP_NEWS).iterrows():
         impact = int(row["Impact"])
         bias = "🟢 Bullish" if impact > 0 else "🔴 Bearish" if impact < 0 else "⚪ Neutral"
         time_text = row["Time"].strftime("%d-%b-%Y %H:%M UTC")
@@ -323,7 +286,7 @@ crude_score, crude_round, crude, crude_conf, crude_events = build_market_news(ra
 ng_score, ng_round, ng, ng_conf, ng_events = build_market_news(raw_ng, NG_TAGS, NG_RULES)
 
 st.title("🛢️ Crude Oil & 🔥 Natural Gas — News Market Bias")
-st.caption("News-only market bias • last 24 hours • newest → oldest • 10–20+ independent websites targeted • refresh every 60 seconds")
+st.caption("News-only • last 24 hours • newest → oldest • 17 independent websites targeted • refresh every 60 seconds")
 
 c1, c2 = st.columns(2)
 with c1:
@@ -334,17 +297,15 @@ with c2:
 st.divider()
 st.subheader("🌐 Website coverage")
 combined = pd.concat([crude, ng], ignore_index=True) if not crude.empty or not ng.empty else pd.DataFrame()
-if not combined.empty:
-    represented = sorted(set(combined["Source"].dropna()))
-else:
-    represented = []
+represented = sorted(set(combined["Source"].dropna())) if not combined.empty else []
 requested = list(TARGET_WEBSITES.keys())
 represented_target = [x for x in represented if x in requested]
 coverage_status = "✅ Target met" if len(represented_target) >= MIN_TARGET_SOURCES else "⚠️ Fewer than 10 returned usable articles right now"
 st.metric("Independent websites represented", f"{len(represented_target)} / {len(requested)}", coverage_status)
-st.caption("The app targets 17 publishers/sites. It does not count Google News as a publisher; Google News is only the RSS transport used for site-specific searches. A website is counted only when an article from that publisher is actually returned.")
+st.caption("Google News is only the RSS transport for site-specific searches; it is never counted as a publisher. A website is counted only when an article from that publisher is actually returned.")
 if represented_target:
     st.write("**Currently represented:** " + " • ".join(represented_target))
+st.write("**Target sources:** " + " • ".join(requested))
 
 st.divider()
 st.subheader("🎯 Market Bias Summary")
@@ -357,10 +318,10 @@ st.dataframe(summary, use_container_width=True, hide_index=True)
 st.divider()
 col1, col2 = st.columns(2)
 with col1:
-    st.subheader(f"📰 Crude news — latest to oldest (24H)")
+    st.subheader("📰 Crude news — latest to oldest (24H)")
     render_news(crude)
 with col2:
-    st.subheader(f"📰 Natural Gas news — latest to oldest (24H)")
+    st.subheader("📰 Natural Gas news — latest to oldest (24H)")
     render_news(ng)
 
 st.divider()
