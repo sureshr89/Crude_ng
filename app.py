@@ -25,7 +25,10 @@ DIRECT_FEEDS = {
     "Rigzone Natural Gas": "https://www.rigzone.com/news/rss/naturalgas_latest.aspx",
     "MarketWatch": "https://feeds.marketwatch.com/marketwatch/topstories/",
     "CNBC": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
-    "Investing.com": "https://www.investing.com/rss/news_14.rss",
+    # Investing.com direct RSS: fast commodity news + broad breaking news.
+    "Investing.com Commodities": "https://www.investing.com/rss/news_11.rss",
+    "Investing.com Latest": "https://www.investing.com/rss/news_1063.rss",
+    "Investing.com India Commodities": "https://in.investing.com/rss/news_11.rss",
 }
 
 # 35+ independent publishers/institutions are targeted. Google News is only the RSS transport.
@@ -99,7 +102,7 @@ SOURCE_WEIGHT = {
     "EIA": 1.45, "OPEC": 1.50, "IEA": 1.50, "Reuters": 1.35,
     "AP News": 1.20, "Bloomberg": 1.20, "S&P Global": 1.20,
     "Rigzone": 1.00, "OilPrice": 0.90, "MarketWatch": 0.95,
-    "CNBC": 0.95, "Investing.com": 0.85, "Yahoo Finance": 0.85,
+    "CNBC": 0.95, "Investing.com": 0.85, "Investing.com Commodities": 1.05, "Investing.com Latest": 0.90, "Investing.com India Commodities": 0.90, "Yahoo Finance": 0.85,
     "Financial Times": 1.10, "Wall Street Journal": 1.15,
     "Natural Gas Intelligence": 1.15, "Energy Intelligence": 1.15,
     "Argus Media": 1.25, "Oil & Gas Journal": 1.05, "World Oil": 1.00,
