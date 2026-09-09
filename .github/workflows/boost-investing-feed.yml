@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: investing-feed-update
+  cancel-in-progress: true
+
 jobs:
   update-feed:
     runs-on: ubuntu-latest
@@ -19,18 +23,15 @@ jobs:
 
       - name: Update Investing.com news ingestion
         run: |
-          git fetch origin main
-          git reset --hard origin/main
+          git config pull.rebase true
+          git pull --rebase origin main
           python - <<'PY'
           from pathlib import Path
           p = Path("app.py")
           s = p.read_text()
 
-          # Show more relevant articles from the 24-hour window.
           s = s.replace("TOP_NEWS = 15", "TOP_NEWS = 30", 1)
 
-          # Add dedicated Investing.com searches. The site itself currently shows a much larger
-          # stream of commodity/futures stories than the old single query was returning.
           old_build = '''    for name, domain in TARGET_WEBSITES.items():
         feeds[f"{name} (web)"] = google_news_url(query, domain)
     feeds.update(DIRECT_FEEDS)
@@ -40,7 +41,7 @@ jobs:
         feeds[f"{name} (web)"] = google_news_url(query, domain)
     feeds.update(DIRECT_FEEDS)
 
-    # Extra fast Investing.com searches so commodity stories are not lost in a broad feed.
+    # Dedicated fast Investing.com commodity searches in addition to the 38-source network.
     investing_queries = {
         "Investing.com Crude Fast": '"crude oil" OR Brent OR WTI OR "oil prices" OR "oil supply" OR Hormuz',
         "Investing.com Gas Fast": '"natural gas" OR LNG OR "gas prices" OR "gas supply" OR "gas storage" OR pipeline',
@@ -53,7 +54,6 @@ jobs:
           if old_build in s:
               s = s.replace(old_build, new_build, 1)
 
-          # feedparser may expose dates as *_parsed rather than a parseable date string.
           old_date = '''def parse_date(entry):
     for key in ("published", "updated"):
         value = getattr(entry, key, None)
@@ -84,12 +84,10 @@ jobs:
           if old_date in s:
               s = s.replace(old_date, new_date, 1)
 
-          # Fetch more entries per source; this matters for Investing.com because its commodity
-          # page has many stories inside the same 24-hour period.
           s = s.replace("def fetch_one(source, url, max_entries=35):", "def fetch_one(source, url, max_entries=75):", 1)
           s = s.replace("def fetch(feeds, max_entries=35):", "def fetch(feeds, max_entries=75):", 1)
 
-          # Keep the direct Investing.com RSS sources, but make them explicitly high priority.
+          # Ensure the direct Investing.com feeds exist even if a previous partial update is absent.
           if '"Investing.com Commodities": "https://www.investing.com/rss/news_11.rss"' not in s:
               marker = '    "CNBC": "https://www.cnbc.com/id/100003114/device/rss/rss.html",\n'
               insert = marker + '    "Investing.com Commodities": "https://www.investing.com/rss/news_11.rss",\n    "Investing.com Latest": "https://www.investing.com/rss/news_1063.rss",\n    "Investing.com India Commodities": "https://in.investing.com/rss/news_11.rss",\n'
