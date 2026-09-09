@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
 st.set_page_config(page_title="Crude & Natural Gas News Bias", page_icon="🛢️", layout="wide")
-st.markdown("<meta http-equiv='refresh' content='60'>", unsafe_allow_html=True)
+st.markdown("<meta http-equiv='refresh' content='10'>", unsafe_allow_html=True)
 
 NEWS_WINDOW_HOURS = 24
 TOP_NEWS = 30
@@ -112,6 +112,12 @@ NG_RULES = [
     (r"gas demand.{0,30}(?:falls|fell|weak|lower)|power demand.{0,30}(?:falls|fell|weak|lower)", -2, "Gas/power demand weakness", "demand"),
 ]
 
+EXCLUDE_NEWS_TERMS = [
+    "live levels", "overbought rsi", "oversold rsi", "technical analysis",
+    "moving average", "fibonacci", "pivot point", "support and resistance",
+    "resistance levels", "support levels", "technical outlook", "chart analysis",
+]
+
 def google_news_url(query, site=None):
     if site:
         query = f"({query}) site:{site}"
@@ -169,7 +175,9 @@ def get_item_source(entry, fallback):
 def fetch_one(source, url, max_entries=75):
     rows = []
     try:
-        feed = feedparser.parse(url)
+        cache_buster = str(int(datetime.now(timezone.utc).timestamp()))
+        fresh_url = url + ("&" if "?" in url else "?") + "_ts=" + cache_buster
+        feed = feedparser.parse(fresh_url)
         for entry in feed.entries[:max_entries]:
             title = clean_text(getattr(entry, "title", ""))
             summary = clean_text(getattr(entry, "summary", ""))
@@ -201,6 +209,8 @@ def fetch(feeds, max_entries=75):
 
 def relevant(row, topic_terms):
     text = f"{row['Headline']} {row['Summary']}".lower()
+    if any(term in text for term in EXCLUDE_NEWS_TERMS):
+        return False
     return any(term.lower() in text for term in topic_terms)
 
 def classify(text, rules):
@@ -270,14 +280,14 @@ def bias_label(score):
 
 def render_news(df):
     if df.empty:
-        st.info("No relevant news in the last 24 hours. The app will retry in 60 seconds.")
+        st.info("No relevant news in the last 24 hours. The app will retry in 10 seconds.")
         return
     for _, row in df.head(TOP_NEWS).iterrows():
         impact = int(row["Impact"])
         bias = "🟢 Bullish" if impact > 0 else "🔴 Bearish" if impact < 0 else "⚪ Neutral"
         time_text = row["Time"].strftime("%d-%b-%Y %H:%M UTC")
         tag_text = ", ".join(row["Tags"]) if row["Tags"] else "market"
-        st.markdown(f"**{bias} | {row['Source']} | {time_text}** — [{row['Headline']}]({row['Link']})  \n`Impact {impact:+d}` • `Importance {row['Importance']:.0f}` • **Tags:** {tag_text}  \n{row['Reason']}")
+        st.markdown(f"**{bias} | {row['Source']} | {time_text}** — [{row['Headline']}]({row['Link']})  \\n`Impact {impact:+d}` • `Importance {row['Importance']:.0f}` • **Tags:** {tag_text}  \\n{row['Reason']}")
 
 def show_market(title, score, rounded, confidence, df):
     st.subheader(title)
@@ -285,7 +295,8 @@ def show_market(title, score, rounded, confidence, df):
     st.markdown(f"### {bias_label(score)}")
     material_count = int((df["Impact"] != 0).sum()) if not df.empty else 0
     source_count = int(df["Source"].nunique()) if not df.empty else 0
-    st.caption(f"News confidence: {confidence:.0f}% • Material events: {material_count} • Websites represented: {source_count} • Window: last {NEWS_WINDOW_HOURS}h")
+    newest = df["Time"].max().strftime("%H:%M:%S UTC") if not df.empty else "--"
+    st.caption(f"News confidence: {confidence:.0f}% • Material events: {material_count} • Websites represented: {source_count} • Newest received: {newest} • Window: last {NEWS_WINDOW_HOURS}h")
 
 crude_feeds = build_news_feeds("crude")
 ng_feeds = build_news_feeds("ng")
@@ -295,7 +306,7 @@ crude_score, crude_round, crude, crude_conf, crude_events = build_market_news(ra
 ng_score, ng_round, ng, ng_conf, ng_events = build_market_news(raw_ng, NG_TAGS, NG_RULES)
 
 st.title("🛢️ Crude Oil & 🔥 Natural Gas — News Market Bias")
-st.caption("News-only market bias • last 24 hours • newest → oldest • 30+ independent websites targeted • Investing.com fast feeds • refresh every 60 seconds")
+st.caption("Near-real-time news-only market bias • polls every 10 seconds • last 24 hours • newest → oldest • 30+ independent websites targeted • Investing.com fast feeds • cache-busted feed requests")
 
 c1, c2 = st.columns(2)
 with c1:
@@ -340,7 +351,7 @@ with st.expander("🌍 Countries and tags covered", expanded=False):
     st.markdown("**NG tags:** " + ", ".join(NG_TAGS))
 
 with st.expander("🧠 How the bias is calculated", expanded=False):
-    st.write("The engine reads only the last 24 hours of relevant news. Supply disruptions, production cuts, inventory draws, strong demand and major geopolitical/shipping risks push the bias bullish. Supply increases, inventory builds, weak demand and de-escalation push the bias bearish. News age, source quality and independent corroboration affect confidence. Country names alone never create bullish or bearish bias.")
+    st.write("The engine reads only the last 24 hours of relevant fundamental news. Technical/price-action headlines such as Live Levels, RSI, moving averages, Fibonacci, pivots and support/resistance are excluded. Supply disruptions, production cuts, inventory draws, strong demand and major geopolitical/shipping risks push the bias bullish. Supply increases, inventory builds, weak demand and de-escalation push the bias bearish. News age, source quality and independent corroboration affect confidence. Country names alone never create bullish or bearish bias.")
     st.warning("This is news-based market decision support, not a guarantee of price direction or profit.")
 
 st.caption("Last refresh: " + datetime.now().astimezone().strftime("%d-%b-%Y %H:%M:%S %Z"))
