@@ -13,7 +13,7 @@ st.set_page_config(page_title="Crude & Natural Gas News Bias", page_icon="🛢�
 st.markdown("<meta http-equiv='refresh' content='60'>", unsafe_allow_html=True)
 
 NEWS_WINDOW_HOURS = 24
-TOP_NEWS = 15
+TOP_NEWS = 30
 MIN_TARGET_SOURCES = 30
 
 DIRECT_FEEDS = {
@@ -25,52 +25,25 @@ DIRECT_FEEDS = {
     "Rigzone Natural Gas": "https://www.rigzone.com/news/rss/naturalgas_latest.aspx",
     "MarketWatch": "https://feeds.marketwatch.com/marketwatch/topstories/",
     "CNBC": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
-    # Investing.com direct RSS: fast commodity news + broad breaking news.
     "Investing.com Commodities": "https://www.investing.com/rss/news_11.rss",
     "Investing.com Latest": "https://www.investing.com/rss/news_1063.rss",
     "Investing.com India Commodities": "https://in.investing.com/rss/news_11.rss",
 }
 
-# 35+ independent publishers/institutions are targeted. Google News is only the RSS transport.
 TARGET_WEBSITES = {
-    "Reuters": "reuters.com",
-    "AP News": "apnews.com",
-    "Bloomberg": "bloomberg.com",
-    "CNBC": "cnbc.com",
-    "MarketWatch": "marketwatch.com",
-    "OilPrice": "oilprice.com",
-    "Rigzone": "rigzone.com",
-    "S&P Global": "spglobal.com",
-    "Investing.com": "investing.com",
-    "Yahoo Finance": "finance.yahoo.com",
-    "Financial Times": "ft.com",
-    "Wall Street Journal": "wsj.com",
-    "Energy Intelligence": "energyintel.com",
-    "Natural Gas Intelligence": "naturalgasintel.com",
-    "EIA": "eia.gov",
-    "IEA": "iea.org",
-    "OPEC": "opec.org",
-    "Argus Media": "argusmedia.com",
-    "Oil & Gas Journal": "ogj.com",
-    "World Oil": "worldoil.com",
-    "Hart Energy": "hartenergy.com",
-    "RBN Energy": "rbnenergy.com",
-    "Natural Gas World": "naturalgasworld.com",
-    "LNG Prime": "lngprime.com",
-    "LNG Industry": "lngindustry.com",
-    "Offshore Energy": "offshore-energy.biz",
-    "Upstream Online": "upstreamonline.com",
-    "Offshore Engineer": "oedigital.com",
-    "Kallanish Energy": "kallanish.com",
-    "ICIS": "icis.com",
-    "Montel News": "montelnews.com",
-    "Energy News Today": "energynewstoday.com",
-    "Gas Infrastructure Europe": "gie.eu",
-    "Yahoo News": "news.yahoo.com",
-    "The Guardian": "theguardian.com",
-    "Al Jazeera": "aljazeera.com",
-    "E&E News": "eenews.net",
-    "Power Technology": "power-technology.com",
+    "Reuters": "reuters.com", "AP News": "apnews.com", "Bloomberg": "bloomberg.com",
+    "CNBC": "cnbc.com", "MarketWatch": "marketwatch.com", "OilPrice": "oilprice.com",
+    "Rigzone": "rigzone.com", "S&P Global": "spglobal.com", "Investing.com": "investing.com",
+    "Yahoo Finance": "finance.yahoo.com", "Financial Times": "ft.com", "Wall Street Journal": "wsj.com",
+    "Energy Intelligence": "energyintel.com", "Natural Gas Intelligence": "naturalgasintel.com",
+    "EIA": "eia.gov", "IEA": "iea.org", "OPEC": "opec.org", "Argus Media": "argusmedia.com",
+    "Oil & Gas Journal": "ogj.com", "World Oil": "worldoil.com", "Hart Energy": "hartenergy.com",
+    "RBN Energy": "rbnenergy.com", "Natural Gas World": "naturalgasworld.com", "LNG Prime": "lngprime.com",
+    "LNG Industry": "lngindustry.com", "Offshore Energy": "offshore-energy.biz", "Upstream Online": "upstreamonline.com",
+    "Offshore Engineer": "oedigital.com", "Kallanish Energy": "kallanish.com", "ICIS": "icis.com",
+    "Montel News": "montelnews.com", "Energy News Today": "energynewstoday.com", "Gas Infrastructure Europe": "gie.eu",
+    "Yahoo News": "news.yahoo.com", "The Guardian": "theguardian.com", "Al Jazeera": "aljazeera.com",
+    "E&E News": "eenews.net", "Power Technology": "power-technology.com",
 }
 
 COUNTRY_TAGS = {
@@ -80,38 +53,32 @@ COUNTRY_TAGS = {
     "Latin America": ["Brazil", "Venezuela", "Mexico", "Guyana", "Colombia"],
     "Europe": ["Norway", "UK", "Germany", "France", "Italy", "Netherlands", "EU"],
     "Asia": ["China", "India", "Japan", "South Korea", "Taiwan", "Singapore"],
-    "Africa": ["Nigeria", "Libya", "Algeria", "Angola", "Egypt"],
-    "Oceania": ["Australia"],
+    "Africa": ["Nigeria", "Libya", "Algeria", "Angola", "Egypt"], "Oceania": ["Australia"],
 }
 
 CRUDE_TAGS = [
-    "crude oil", "Brent", "WTI", "OPEC", "OPEC+", "oil supply", "oil production",
-    "oil exports", "oil imports", "oil inventory", "refinery", "refining", "SPR",
-    "strategic petroleum reserve", "oil tanker", "tanker rates", "shipping",
-    "Strait of Hormuz", "Red Sea", "Bab el-Mandeb", "sanctions", "pipeline",
-    "oil demand", "China oil demand", "India oil demand", "US oil production",
+    "crude oil", "Brent", "WTI", "OPEC", "OPEC+", "oil supply", "oil production", "oil exports", "oil imports",
+    "oil inventory", "refinery", "refining", "SPR", "strategic petroleum reserve", "oil tanker", "tanker rates",
+    "shipping", "Strait of Hormuz", "Red Sea", "Bab el-Mandeb", "sanctions", "pipeline", "oil demand",
+    "China oil demand", "India oil demand", "US oil production",
 ]
 NG_TAGS = [
-    "natural gas", "natgas", "LNG", "Henry Hub", "gas storage", "gas production",
-    "gas supply", "gas demand", "gas prices", "pipeline", "LNG exports", "LNG imports",
-    "LNG terminal", "Freeport LNG", "Sabine Pass", "Europe gas", "TTF gas", "JKM LNG",
-    "hurricane", "cold weather", "heat wave", "power demand", "gas outage",
+    "natural gas", "natgas", "LNG", "Henry Hub", "gas storage", "gas production", "gas supply", "gas demand",
+    "gas prices", "pipeline", "LNG exports", "LNG imports", "LNG terminal", "Freeport LNG", "Sabine Pass",
+    "Europe gas", "TTF gas", "JKM LNG", "hurricane", "cold weather", "heat wave", "power demand", "gas outage",
 ]
 
 SOURCE_WEIGHT = {
-    "EIA": 1.45, "OPEC": 1.50, "IEA": 1.50, "Reuters": 1.35,
-    "AP News": 1.20, "Bloomberg": 1.20, "S&P Global": 1.20,
-    "Rigzone": 1.00, "OilPrice": 0.90, "MarketWatch": 0.95,
-    "CNBC": 0.95, "Investing.com": 0.85, "Investing.com Commodities": 1.05, "Investing.com Latest": 0.90, "Investing.com India Commodities": 0.90, "Yahoo Finance": 0.85,
-    "Financial Times": 1.10, "Wall Street Journal": 1.15,
-    "Natural Gas Intelligence": 1.15, "Energy Intelligence": 1.15,
-    "Argus Media": 1.25, "Oil & Gas Journal": 1.05, "World Oil": 1.00,
-    "Hart Energy": 1.00, "RBN Energy": 1.10, "Natural Gas World": 1.00,
-    "LNG Prime": 1.00, "LNG Industry": 1.00, "Offshore Energy": 0.95,
-    "Upstream Online": 1.00, "Offshore Engineer": 0.95, "Kallanish Energy": 0.90,
-    "ICIS": 1.15, "Montel News": 1.00, "Energy News Today": 0.85,
-    "Gas Infrastructure Europe": 1.00, "Yahoo News": 0.75, "The Guardian": 0.80,
-    "Al Jazeera": 0.85, "E&E News": 1.00, "Power Technology": 0.85,
+    "EIA": 1.45, "OPEC": 1.50, "IEA": 1.50, "Reuters": 1.35, "AP News": 1.20, "Bloomberg": 1.20,
+    "S&P Global": 1.20, "Rigzone": 1.00, "OilPrice": 0.90, "MarketWatch": 0.95, "CNBC": 0.95,
+    "Investing.com": 0.85, "Investing.com Commodities": 1.10, "Investing.com Latest": 0.95,
+    "Investing.com India Commodities": 1.00, "Yahoo Finance": 0.85, "Financial Times": 1.10,
+    "Wall Street Journal": 1.15, "Natural Gas Intelligence": 1.15, "Energy Intelligence": 1.15,
+    "Argus Media": 1.25, "Oil & Gas Journal": 1.05, "World Oil": 1.00, "Hart Energy": 1.00,
+    "RBN Energy": 1.10, "Natural Gas World": 1.00, "LNG Prime": 1.00, "LNG Industry": 1.00,
+    "Offshore Energy": 0.95, "Upstream Online": 1.00, "Offshore Engineer": 0.95, "Kallanish Energy": 0.90,
+    "ICIS": 1.15, "Montel News": 1.00, "Energy News Today": 0.85, "Gas Infrastructure Europe": 1.00,
+    "Yahoo News": 0.75, "The Guardian": 0.80, "Al Jazeera": 0.85, "E&E News": 1.00, "Power Technology": 0.85,
 }
 
 CRUDE_RULES = [
@@ -131,7 +98,6 @@ CRUDE_RULES = [
     (r"refinery (?:restart|restarts|resumes|resume)", -1, "Refinery restart", "refinery"),
     (r"ceasefire|peace deal|de-escalation", -1, "Geopolitical de-escalation", "geopolitics"),
 ]
-
 NG_RULES = [
     (r"storage (?:draw|withdrawal|withdrawals)|storage.{0,30}(?:fell|decline|declined)", 3, "Gas storage draw", "storage"),
     (r"storage (?:build|injection|injections|increase|increases)|storage.{0,30}(?:rose|rise|build)", -3, "Gas storage build", "storage"),
@@ -146,12 +112,10 @@ NG_RULES = [
     (r"gas demand.{0,30}(?:falls|fell|weak|lower)|power demand.{0,30}(?:falls|fell|weak|lower)", -2, "Gas/power demand weakness", "demand"),
 ]
 
-
 def google_news_url(query, site=None):
     if site:
         query = f"({query}) site:{site}"
     return "https://news.google.com/rss/search?q=" + quote_plus(query) + "&hl=en-US&gl=US&ceid=US:en"
-
 
 def build_news_feeds(product):
     tags = CRUDE_TAGS if product == "crude" else NG_TAGS
@@ -160,8 +124,14 @@ def build_news_feeds(product):
     for name, domain in TARGET_WEBSITES.items():
         feeds[f"{name} (web)"] = google_news_url(query, domain)
     feeds.update(DIRECT_FEEDS)
+    investing_queries = {
+        "Investing.com Crude Fast": '"crude oil" OR Brent OR WTI OR "oil prices" OR "oil supply" OR Hormuz',
+        "Investing.com Gas Fast": '"natural gas" OR LNG OR "gas prices" OR "gas supply" OR "gas storage" OR pipeline',
+        "Investing.com Energy Fast": 'Iran OR Gulf OR refinery OR tanker OR sanctions OR OPEC OR "energy infrastructure"',
+    }
+    for name, q in investing_queries.items():
+        feeds[name] = google_news_url(q, "investing.com")
     return feeds
-
 
 def parse_date(entry):
     for key in ("published", "updated"):
@@ -171,14 +141,19 @@ def parse_date(entry):
                 return parsedate_to_datetime(value).astimezone(timezone.utc)
             except Exception:
                 pass
+    for key in ("published_parsed", "updated_parsed"):
+        value = getattr(entry, key, None)
+        if value:
+            try:
+                return datetime(*value[:6], tzinfo=timezone.utc)
+            except Exception:
+                pass
     return None
-
 
 def clean_text(value):
     value = html.unescape(str(value or ""))
     value = re.sub(r"<[^>]+>", " ", value)
     return re.sub(r"\s+", " ", value).strip()
-
 
 def get_item_source(entry, fallback):
     source_obj = getattr(entry, "source", None)
@@ -191,8 +166,7 @@ def get_item_source(entry, fallback):
         return source_title
     return fallback.replace(" (web)", "")
 
-
-def fetch_one(source, url, max_entries=35):
+def fetch_one(source, url, max_entries=75):
     rows = []
     try:
         feed = feedparser.parse(url)
@@ -208,8 +182,7 @@ def fetch_one(source, url, max_entries=35):
         pass
     return rows
 
-
-def fetch(feeds, max_entries=35):
+def fetch(feeds, max_entries=75):
     rows = []
     with ThreadPoolExecutor(max_workers=16) as pool:
         futures = [pool.submit(fetch_one, source, url, max_entries) for source, url in feeds.items()]
@@ -226,11 +199,9 @@ def fetch(feeds, max_entries=35):
     df = df.sort_values("Time", ascending=False).drop_duplicates("DedupKey", keep="first").drop(columns=["DedupKey"])
     return df.sort_values("Time", ascending=False).reset_index(drop=True)
 
-
 def relevant(row, topic_terms):
     text = f"{row['Headline']} {row['Summary']}".lower()
     return any(term.lower() in text for term in topic_terms)
-
 
 def classify(text, rules):
     text = text.lower()
@@ -244,11 +215,9 @@ def classify(text, rules):
             hits.append((points, reason, group))
     return max(-4, min(4, score)), hits
 
-
 def age_weight(dt):
     age_hours = max(0.0, (datetime.now(timezone.utc) - dt).total_seconds() / 3600.0)
     return max(0.10, 2 ** (-age_hours / 12.0))
-
 
 def build_market_news(df, topic_terms, rules):
     if df.empty:
@@ -292,14 +261,12 @@ def build_market_news(df, topic_terms, rules):
     df = df.sort_values("Time", ascending=False).reset_index(drop=True)
     return score, int(round(score)), df, confidence, sorted(event_sources.items())
 
-
 def bias_label(score):
     if score >= 5: return "🔥 STRONG BULLISH"
     if score >= 2: return "🟢 BULLISH"
     if score <= -5: return "🔥 STRONG BEARISH"
     if score <= -2: return "🔴 BEARISH"
     return "🟡 NEUTRAL"
-
 
 def render_news(df):
     if df.empty:
@@ -312,7 +279,6 @@ def render_news(df):
         tag_text = ", ".join(row["Tags"]) if row["Tags"] else "market"
         st.markdown(f"**{bias} | {row['Source']} | {time_text}** — [{row['Headline']}]({row['Link']})  \n`Impact {impact:+d}` • `Importance {row['Importance']:.0f}` • **Tags:** {tag_text}  \n{row['Reason']}")
 
-
 def show_market(title, score, rounded, confidence, df):
     st.subheader(title)
     st.metric("24H news impact", f"{rounded:+d}")
@@ -320,7 +286,6 @@ def show_market(title, score, rounded, confidence, df):
     material_count = int((df["Impact"] != 0).sum()) if not df.empty else 0
     source_count = int(df["Source"].nunique()) if not df.empty else 0
     st.caption(f"News confidence: {confidence:.0f}% • Material events: {material_count} • Websites represented: {source_count} • Window: last {NEWS_WINDOW_HOURS}h")
-
 
 crude_feeds = build_news_feeds("crude")
 ng_feeds = build_news_feeds("ng")
@@ -330,7 +295,7 @@ crude_score, crude_round, crude, crude_conf, crude_events = build_market_news(ra
 ng_score, ng_round, ng, ng_conf, ng_events = build_market_news(raw_ng, NG_TAGS, NG_RULES)
 
 st.title("🛢️ Crude Oil & 🔥 Natural Gas — News Market Bias")
-st.caption("News-only market bias • last 24 hours • newest → oldest • 30+ independent websites targeted • refresh every 60 seconds")
+st.caption("News-only market bias • last 24 hours • newest → oldest • 30+ independent websites targeted • Investing.com fast feeds • refresh every 60 seconds")
 
 c1, c2 = st.columns(2)
 with c1:
@@ -346,7 +311,7 @@ requested = list(TARGET_WEBSITES.keys())
 represented_target = [x for x in represented if x in requested]
 coverage_status = "✅ 30+ target met" if len(represented_target) >= MIN_TARGET_SOURCES else f"⚠️ {len(represented_target)} usable websites returned — target is 30+"
 st.metric("Independent websites represented", f"{len(represented_target)} / {len(requested)}", coverage_status)
-st.caption("The app targets 38 independent publishers/institutions. Google News is only an RSS transport layer and is never counted as a publisher. A website is counted only when an article from that publisher is actually returned.")
+st.caption("The app targets 38 independent publishers/institutions. Google News is only an RSS transport layer and is never counted as a publisher. Investing.com is also queried through dedicated fast commodity searches and direct RSS feeds.")
 if represented_target:
     st.write("**Currently represented:** " + " • ".join(represented_target))
 
