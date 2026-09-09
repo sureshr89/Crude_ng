@@ -6,18 +6,12 @@ import pandas as pd
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
-st.set_page_config(page_title="Crude & Natural Gas News", page_icon="🛢️", layout="wide")
+st.set_page_config(page_title="Crude & Natural Gas News Bias", page_icon="🛢️", layout="wide")
 st.markdown("<meta http-equiv='refresh' content='60'>", unsafe_allow_html=True)
 
 NEWS_WINDOW_HOURS = 24
 TOP_NEWS = 10
 
-# -----------------------------------------------------------------------------
-# INTERNATIONAL NEWS COVERAGE
-# Official energy sources + broad international Google News RSS feeds.
-# Google News RSS is used only as a public news-discovery layer; every headline
-# keeps its original publisher link. Failed feeds are ignored automatically.
-# -----------------------------------------------------------------------------
 CRUDE_FEEDS = {
     "EIA": "https://www.eia.gov/rss/todayinenergy.xml",
     "OPEC": "https://www.opec.org/assets/assetdb/opec_rss.xml",
@@ -25,15 +19,12 @@ CRUDE_FEEDS = {
     "OilPrice": "https://oilprice.com/rss/main",
     "Rigzone": "https://www.rigzone.com/news/rss/rigzone_latest.aspx",
 }
-
 NG_FEEDS = {
     "EIA": "https://www.eia.gov/rss/todayinenergy.xml",
     "IEA": "https://www.iea.org/rss/news.xml",
     "Rigzone": "https://www.rigzone.com/news/rss/naturalgas_latest.aspx",
 }
 
-# Country/region-specific searches.  These deliberately cover producers,
-# exporters, transit points, major consumers and weather/LNG hubs.
 COUNTRY_TAGS = {
     "Middle East": ["Saudi Arabia", "Iran", "Iraq", "UAE", "Qatar", "Kuwait", "Oman", "Israel"],
     "Russia/CIS": ["Russia", "Kazakhstan", "Azerbaijan", "Caspian"],
@@ -45,16 +36,13 @@ COUNTRY_TAGS = {
     "Oceania": ["Australia"],
 }
 
-# Search themes are intentionally explicit so the engine captures each major
-# market-moving tag rather than treating a country name as bullish/bearish.
 CRUDE_TAGS = [
     "crude oil", "Brent", "WTI", "OPEC", "OPEC+", "oil supply", "oil production",
-    "oil exports", "oil imports", "oil inventory", "refinery", "refining",
-    "SPR", "strategic petroleum reserve", "oil tanker", "tanker rates", "shipping",
+    "oil exports", "oil imports", "oil inventory", "refinery", "refining", "SPR",
+    "strategic petroleum reserve", "oil tanker", "tanker rates", "shipping",
     "Strait of Hormuz", "Red Sea", "Bab el-Mandeb", "sanctions", "pipeline",
     "oil demand", "China oil demand", "India oil demand", "US oil production",
 ]
-
 NG_TAGS = [
     "natural gas", "natgas", "LNG", "Henry Hub", "gas storage", "gas production",
     "gas supply", "gas demand", "gas prices", "pipeline", "LNG exports", "LNG imports",
@@ -62,9 +50,7 @@ NG_TAGS = [
     "hurricane", "cold weather", "heat wave", "power demand", "gas outage",
 ]
 
-SOURCE_WEIGHT = {
-    "EIA": 1.45, "OPEC": 1.50, "IEA": 1.50, "Rigzone": 1.00, "OilPrice": 0.90,
-}
+SOURCE_WEIGHT = {"EIA": 1.45, "OPEC": 1.50, "IEA": 1.50, "Rigzone": 1.00, "OilPrice": 0.90}
 
 CRUDE_RULES = [
     (r"production (?:cut|cuts|cutback|reduction)|output (?:cut|cuts|reduction)", 2, "Production cut", "supply"),
@@ -83,7 +69,6 @@ CRUDE_RULES = [
     (r"refinery (?:restart|restarts|resumes|resume)", -1, "Refinery restart", "refinery"),
     (r"ceasefire|peace deal|de-escalation", -1, "Geopolitical de-escalation", "geopolitics"),
 ]
-
 NG_RULES = [
     (r"storage (?:draw|withdrawal|withdrawals)|storage.{0,30}(?:fell|decline|declined)", 3, "Gas storage draw", "storage"),
     (r"storage (?:build|injection|injections|increase|increases)|storage.{0,30}(?:rose|rise|build)", -3, "Gas storage build", "storage"),
@@ -106,15 +91,12 @@ def google_news_url(query, country="US"):
 def build_international_feeds(product):
     feeds = {}
     tags = CRUDE_TAGS if product == "crude" else NG_TAGS
-    # Product-wide global searches catch stories that may not mention a country.
     feeds["Global"] = google_news_url(" OR ".join(tags[:10]))
     feeds["Global Energy"] = google_news_url("(" + " OR ".join(tags) + ") oil gas energy")
-
     for region, countries in COUNTRY_TAGS.items():
         for country in countries:
             country_terms = " OR ".join(f'"{x}"' for x in tags[:8])
-            query = f'({country_terms}) AND "{country}"'
-            feeds[f"{region}: {country}"] = google_news_url(query)
+            feeds[f"{region}: {country}"] = google_news_url(f'({country_terms}) AND "{country}"')
     return feeds
 
 
@@ -153,7 +135,6 @@ def fetch(feeds, max_entries=35):
                 rows.append({"Time": parse_date(entry), "Source": source, "Headline": title, "Summary": summary, "Link": link})
         except Exception:
             continue
-
     columns = ["Time", "Source", "Headline", "Summary", "Link"]
     if not rows:
         return pd.DataFrame(columns=columns)
@@ -186,7 +167,6 @@ def age_weight(dt):
 def build_market_news(df, topic_terms, rules):
     if df.empty:
         return 0.0, 0, df, 0.0, []
-
     cutoff = datetime.now(timezone.utc) - pd.Timedelta(hours=NEWS_WINDOW_HOURS)
     df = df[(df["Time"] >= cutoff) & df.apply(lambda r: relevant(r, topic_terms), axis=1)].copy()
     if df.empty:
@@ -213,8 +193,6 @@ def build_market_news(df, topic_terms, rules):
     material = df[df["Impact"] != 0].copy()
     raw_total = float(material["Weighted"].sum()) if not material.empty else 0.0
 
-    # De-duplicate repeated coverage of the same market event. Multiple sources
-    # can raise confidence, but the same event should not create unlimited score.
     event_sources = {}
     for _, row in material.iterrows():
         for group in row["Groups"]:
@@ -230,7 +208,6 @@ def build_market_news(df, topic_terms, rules):
     confidence = max(0.0, min(85.0, confidence))
 
     score = max(-10.0, min(10.0, raw_total))
-    # Importance prioritises impact, freshness and credible-source weight.
     df["Importance"] = (df["Impact"].abs() * df["Weight"] * 10).round(1)
     df = df.sort_values(["Importance", "Time"], ascending=[False, False]).reset_index(drop=True)
     return score, int(round(score)), df, confidence, sorted(event_sources.items())
@@ -242,22 +219,6 @@ def bias_label(score):
     if score <= -5: return "🔥 STRONG BEARISH"
     if score <= -2: return "🔴 BEARISH"
     return "🟡 NEUTRAL"
-
-
-def news_confirmation(price_action, score, confidence):
-    if price_action == "SELL":
-        if score <= -2 and confidence >= 55:
-            return "🔴 SELL CONFIRMED", "Price action SELL + bearish 24H news confirmation", min(90, int(confidence + 10))
-        if score >= 2:
-            return "⛔ NO SELL", "News conflicts with SELL price action", int(max(0, confidence))
-        return "🟡 WAIT", "SELL price action, but news does not confirm", int(confidence)
-    if price_action == "BUY":
-        if score >= 2 and confidence >= 55:
-            return "🟢 BUY CONFIRMED", "Price action BUY + bullish 24H news confirmation", min(90, int(confidence + 10))
-        if score <= -2:
-            return "⛔ NO BUY", "News conflicts with BUY price action", int(max(0, confidence))
-        return "🟡 WAIT", "BUY price action, but news does not confirm", int(confidence)
-    return "⚪ NO CLEAR SETUP", "Wait for a clear price-action trigger", 0
 
 
 def render_news(df):
@@ -279,48 +240,34 @@ def render_news(df):
 def show_market(title, score, rounded, confidence, df):
     st.subheader(title)
     st.metric("24H news impact", f"{rounded:+d}")
-    st.write(bias_label(score))
+    st.markdown(f"### {bias_label(score)}")
     material_count = int((df["Impact"] != 0).sum()) if not df.empty else 0
     st.caption(f"News confidence: {confidence:.0f}% • Material events: {material_count} • Window: last {NEWS_WINDOW_HOURS}h")
 
 
-# -----------------------------------------------------------------------------
-# Pull official feeds + international country-by-country discovery feeds.
-# -----------------------------------------------------------------------------
 crude_feeds = {**CRUDE_FEEDS, **build_international_feeds("crude")}
 ng_feeds = {**NG_FEEDS, **build_international_feeds("ng")}
-
 raw_crude = fetch(crude_feeds)
 raw_ng = fetch(ng_feeds)
-
 crude_score, crude_round, crude, crude_conf, crude_events = build_market_news(raw_crude, CRUDE_TAGS, CRUDE_RULES)
 ng_score, ng_round, ng, ng_conf, ng_events = build_market_news(raw_ng, NG_TAGS, NG_RULES)
 
-st.title("🛢️ Crude Oil & 🔥 Natural Gas — International News Engine")
-st.caption("24-hour international coverage • producer/exporter/consumer countries • event-based impact • refresh every 60 seconds")
+st.title("🛢️ Crude Oil & 🔥 Natural Gas — News Market Bias")
+st.caption("News-only market bias • international coverage • last 24 hours • refresh every 60 seconds")
 
 c1, c2 = st.columns(2)
 with c1:
-    show_market("🛢️ CRUDE", crude_score, crude_round, crude_conf, crude)
+    show_market("🛢️ CRUDE OIL", crude_score, crude_round, crude_conf, crude)
 with c2:
     show_market("🔥 NATURAL GAS", ng_score, ng_round, ng_conf, ng)
 
 st.divider()
-st.subheader("🎯 Price Action + News Confirmation")
-
-p1, p2 = st.columns(2)
-with p1:
-    crude_pa = st.selectbox("Crude price-action trigger", ["NO CLEAR", "SELL", "BUY"], key="crude_pa")
-    a, why, conf = news_confirmation(crude_pa, crude_score, crude_conf)
-    st.metric("Crude decision", a)
-    st.caption(f"{why} • Setup confidence: {conf}%")
-with p2:
-    ng_pa = st.selectbox("Natural Gas price-action trigger", ["NO CLEAR", "SELL", "BUY"], key="ng_pa")
-    a, why, conf = news_confirmation(ng_pa, ng_score, ng_conf)
-    st.metric("Natural Gas decision", a)
-    st.caption(f"{why} • Setup confidence: {conf}%")
-
-st.info("Price action remains the primary trigger. This screen uses international 24H news only as confirmation; it does not guarantee a profitable trade.")
+st.subheader("🎯 Market Bias Summary")
+summary = pd.DataFrame([
+    {"Market": "Crude Oil", "Bias": bias_label(crude_score), "Impact": crude_round, "Confidence": f"{crude_conf:.0f}%"},
+    {"Market": "Natural Gas", "Bias": bias_label(ng_score), "Impact": ng_round, "Confidence": f"{ng_conf:.0f}%"},
+])
+st.dataframe(summary, use_container_width=True, hide_index=True)
 
 st.divider()
 col1, col2 = st.columns(2)
@@ -338,8 +285,8 @@ with st.expander("🌍 Countries and tags covered", expanded=False):
     st.markdown("**Crude tags:** " + ", ".join(CRUDE_TAGS))
     st.markdown("**NG tags:** " + ", ".join(NG_TAGS))
 
-with st.expander("🧠 Decision rules", expanded=False):
-    st.write("SELL + bearish news = SELL CONFIRMED. SELL + neutral news = WAIT. SELL + bullish news = NO SELL. BUY + bullish news = BUY CONFIRMED. BUY + neutral news = WAIT. BUY + bearish news = NO BUY.")
-    st.warning("Use MCX live price, breakout/breakdown, volume/open interest where available, entry, stop-loss and RR before placing an order.")
+with st.expander("🧠 How the bias is calculated", expanded=False):
+    st.write("The engine reads only the last 24 hours of relevant news. Supply disruptions, production cuts, inventory draws, strong demand and major geopolitical/shipping risks push the bias bullish. Supply increases, inventory builds, weak demand and de-escalation push the bias bearish. News age, source quality and independent corroboration affect confidence. Country names alone never create bullish or bearish bias.")
+    st.warning("This is news-based market decision support, not a guarantee of price direction or profit.")
 
 st.caption("Last refresh: " + datetime.now().astimezone().strftime("%d-%b-%Y %H:%M:%S %Z"))
